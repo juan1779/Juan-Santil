@@ -9,14 +9,19 @@
  *    and render name, price, description and variant pickers dynamically.
  *  - Track the selected options and resolve the matching variant.
  *  - Add the resolved variant to the cart via /cart/add.js.
- *  - Business rule: if the added variant's options match the merchant's
- *    configured "bundle trigger" (default Black / Medium), a second
- *    product (default handle "soft-winter-jacket") is added automatically
- *    in the same request.
  *  - Refresh Dawn's cart drawer / cart icon bubble without a page reload.
  *
- * No external dependencies (no jQuery). One instance per section, so the
- * section can be added to a page multiple times safely.
+ * Also installs a GLOBAL, site-wide cart bundle rule (see below):
+ *  - Business rule: whenever ANY product with variant options matching
+ *    the configured trigger (default Black / Medium) is added to the
+ *    cart — from this popup, a normal product page (PDP), a quick-buy
+ *    button, anywhere — the configured bundle product (default handle
+ *    "soft-winter-jacket") is added automatically right after it.
+ *
+ * No external dependencies (no jQuery). One ShopTheLook instance per
+ * section, so the section can be added to a page multiple times safely.
+ * The global bundle rule is installed once per page, independent of how
+ * many "Shop the look" sections exist (or even if none exist at all).
  * ---------------------------------------------------------------------------
  */
 
@@ -36,6 +41,331 @@
 
   // Simple in-memory cache so re-opening the same product doesn't re-fetch.
   const productCache = new Map();
+
+  /**
+   * Fetches a product by handle via the Storefront AJAX API, sharing the
+   * same in-memory cache used by the quick-view modal. Used both by
+   * ShopTheLook instances and by the global bundle rule below.
+   */
+  async function fetchProductByHandle(handle) {
+    if (productCache.has(handle)) return productCache.get(handle);
+
+    const response = await fetch(`/products/${handle}.js`);
+    if (!response.ok) throw new Error(`Product "${handle}" not found`);
+
+    const product = await response.json();
+    productCache.set(handle, product);
+    return product;
+  }
+
+  /**
+   * Re-renders Dawn's cart drawer / cart icon bubble in place using the
+   * Section Rendering API. Shared by ShopTheLook instances and the global
+   * bundle rule, so the drawer reflects the auto-added bundle item too.
+   */
+  async function refreshCartUI() {
+    try {
+      const response = await fetch(
+        `${(window.Shopify && window.Shopify.routes && window.Shopify.routes.root) || "/"}?sections=cart-drawer,cart-icon-bubble`,
+      );
+      if (!response.ok) return;
+      const data = await response.json();
+      const parser = new DOMParser();
+
+      if (data["cart-drawer"]) {
+        const doc = parser.parseFromString(data["cart-drawer"], "text/html");
+        const newDrawer = doc.querySelector("cart-drawer");
+        const oldDrawer = document.querySelector("cart-drawer");
+        if (newDrawer && oldDrawer) {
+          oldDrawer.replaceWith(newDrawer);
+        }
+      }
+
+      if (data["cart-icon-bubble"]) {
+        const doc = parser.parseFromString(
+          data["cart-icon-bubble"],
+          "text/html",
+        );
+        const newBubble = doc.querySelector(".shopify-section");
+        const oldBubble = document.getElementById("cart-icon-bubble");
+        if (newBubble && oldBubble) oldBubble.innerHTML = newBubble.innerHTML;
+      }
+
+      const drawer = document.querySelector("cart-drawer");
+      if (drawer && typeof drawer.open === "function") {
+        drawer.open();
+      }
+    } catch (error) {
+      // Non-fatal: the item is already in the cart even if the drawer
+      // failed to refresh visually.
+      console.warn("[cart-bundle-rule] Could not refresh cart drawer:", error);
+    }
+  }
+
+  /* =========================================================================
+   * GLOBAL CART BUNDLE RULE (site-wide)
+   * -------------------------------------------------------------------------
+   * Whenever ANY product variant whose options match the configured
+   * trigger (default: Black / Medium) is added to the cart — from this
+   * "Shop the look" popup, a normal product page, a collection quick-buy
+   * button, another app, anywhere — the configured bundle product
+   * (default handle "soft-winter-jacket") is added automatically too.
+   *
+   * HOW IT WORKS (important, read before touching this):
+   *  1. We patch window.fetch exactly once. The patched fetch ALWAYS
+   *     calls the real, original fetch FIRST and returns that exact
+   *     promise to the caller, untouched. This is the #1 rule: our code
+   *     must never delay, alter, or break a normal add-to-cart request.
+   *  2. We only ever LOOK AT THE RESPONSE (via response.clone(), which
+   *     never disturbs the original body stream) of requests going to
+   *     Shopify's /cart/add.js endpoint. We never read or modify the
+   *     request body — Dawn's product form posts a FormData body, and
+   *     trying to inspect/clone that is unnecessary and risky, so we
+   *     don't do it.
+   *  3. Shopify's /cart/add.js response already includes
+   *     `options_with_values` for every line item added — e.g.
+   *     [{ name: "Color", value: "Black" }, { name: "Size", value: "Medium" }]
+   *     — so we can check the trigger directly from the response, with
+   *     no need to look anything up in a product cache.
+   *  4. If triggered, we fire a second, independent POST to
+   *     /cart/add.js (using the *original*, unpatched fetch, so it's
+   *     never re-inspected) to add the bundle product, then refresh the
+   *     cart drawer.
+   *  5. Every step is wrapped in try/catch. Worst case if something
+   *     goes wrong here: the bundle simply doesn't get added — the
+   *     customer's own add-to-cart action is never affected.
+   *
+   * DEPLOYMENT NOTE: this rule only runs on pages where this script is
+   * actually loaded. If shop-the-look.js is only included on pages that
+   * render the "Shop the look" section, add-to-cart actions on pages
+   * without that section (e.g. a plain product page) won't be covered.
+   * To make the rule truly site-wide, include this script from
+   * theme.liquid (or another snippet that loads on every page).
+   * ========================================================================= */
+
+  const CART_ADD_ENDPOINT_RE = /\/cart\/add(\.js)?(\?|$)/i;
+
+  function getRequestUrl(input) {
+    if (typeof input === "string") return input;
+    if (input && typeof input.url === "string") return input.url; // Request object
+    return String(input || "");
+  }
+
+  function getRequestMethod(input, init) {
+    if (init && init.method) return init.method;
+    if (input && typeof input.method === "string") return input.method; // Request object
+    return "GET";
+  }
+
+  /**
+   * Reads the merchant-configured bundle trigger. Reuses the same
+   * data-* attributes already exposed on the "Shop the look" section (so
+   * merchants keep a single place to configure this in the customizer),
+   * falling back to the documented defaults (Black / Medium /
+   * soft-winter-jacket) when that section isn't present on the current
+   * page at all.
+   */
+  function getBundleConfig() {
+    const root = document.querySelector("[data-shop-the-look]");
+    return {
+      handle: (
+        (root && root.dataset.bundleHandle) ||
+        "soft-winter-jacket"
+      ).trim(),
+      color: ((root && root.dataset.bundleColor) || "black")
+        .trim()
+        .toLowerCase(),
+      size: ((root && root.dataset.bundleSize) || "medium")
+        .trim()
+        .toLowerCase(),
+    };
+  }
+
+  // Size aliases so "Medium", "M", "MEDIUM", etc. are all treated as the
+  // same size. Covers the shop's XS / S / M / L range plus common full
+  // words, so merchants can type either in the "bundle size" setting.
+  const SIZE_ALIASES = {
+    xs: "xs",
+    "extra small": "xs",
+    s: "s",
+    small: "s",
+    m: "m",
+    med: "m",
+    medium: "m",
+    l: "l",
+    large: "l",
+    xl: "xl",
+    "extra large": "xl",
+  };
+
+  function normalizeSize(value) {
+    const normalized = String(value || "")
+      .trim()
+      .toLowerCase();
+    return SIZE_ALIASES[normalized] || normalized;
+  }
+
+  function normalizeColor(value) {
+    return String(value || "")
+      .trim()
+      .toLowerCase();
+  }
+
+  /**
+   * Checks whether a cart line item (as returned by /cart/add.js) matches
+   * the configured bundle trigger, regardless of option order, case, or
+   * whether the size was typed as "M" or "Medium".
+   */
+  function itemMatchesBundleTrigger(item, config) {
+    if (!config.color && !config.size) return false;
+
+    const optionValues = Array.isArray(item.options_with_values)
+      ? item.options_with_values.map((option) => option.value)
+      : [];
+
+    const hasColor =
+      !config.color ||
+      optionValues.some(
+        (value) => normalizeColor(value) === normalizeColor(config.color),
+      );
+    const hasSize =
+      !config.size ||
+      optionValues.some(
+        (value) => normalizeSize(value) === normalizeSize(config.size),
+      );
+
+    return hasColor && hasSize;
+  }
+
+  async function getBundleVariantId(handle) {
+    try {
+      const bundleProduct = await fetchProductByHandle(handle);
+      const availableVariant =
+        bundleProduct.variants.find((v) => v.available) ||
+        bundleProduct.variants[0];
+      return availableVariant ? availableVariant.id : null;
+    } catch (error) {
+      console.warn(
+        `[cart-bundle-rule] Could not load bundle product "${handle}":`,
+        error,
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Inspects the (cloned) response of a completed /cart/add(.js) request
+   * and, if it matches the trigger, fires a second /cart/add.js request
+   * to add the bundle product. Uses the *original*, unpatched fetch for
+   * that second request so it's never re-inspected (no re-entrancy/loop).
+   */
+  async function handleCartAddResponse(response, originalFetch) {
+    try {
+      if (!response || !response.ok) return;
+
+      let data;
+      try {
+        data = await response.json();
+      } catch (error) {
+        return; // Not a JSON response — nothing we can inspect.
+      }
+
+      // /cart/add.js returns either a single line item object, or
+      // { items: [...] } when multiple items were posted at once.
+      const items = Array.isArray(data.items)
+        ? data.items
+        : data.id
+          ? [data]
+          : [];
+      if (items.length === 0) return;
+
+      const config = getBundleConfig();
+      if (!config.handle) return;
+
+      // If the bundle product was already part of this same request (the
+      // customer added it manually alongside the triggering product),
+      // don't add a second one.
+      const bundleAlreadyIncluded = items.some(
+        (item) => item.handle === config.handle,
+      );
+      if (bundleAlreadyIncluded) return;
+
+      const triggered = items.some((item) =>
+        itemMatchesBundleTrigger(item, config),
+      );
+      if (!triggered) return;
+
+      const bundleVariantId = await getBundleVariantId(config.handle);
+      if (!bundleVariantId) return;
+
+      const addResponse = await originalFetch("/cart/add.js", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          items: [{ id: bundleVariantId, quantity: 1 }],
+        }),
+      });
+
+      if (addResponse.ok) {
+        await refreshCartUI();
+      } else {
+        console.warn(
+          "[cart-bundle-rule] Failed to add bundle product to cart.",
+        );
+      }
+    } catch (error) {
+      console.warn(
+        "[cart-bundle-rule] Error processing cart add response:",
+        error,
+      );
+    }
+  }
+
+  /**
+   * Patches window.fetch exactly once so every /cart/add(.js) call made
+   * anywhere on the page — by this file, Dawn's own product-form.js, a
+   * quick-buy button, another app, etc. — is observed without ever
+   * altering its behavior, timing, or body for the original caller.
+   */
+  function initGlobalCartBundleRule() {
+    if (window.__cartBundleRuleInitialized) return;
+    window.__cartBundleRuleInitialized = true;
+
+    const originalFetch = window.fetch.bind(window);
+
+    window.fetch = function (input, init) {
+      // Rule #1: the real request always goes out first, completely
+      // untouched, and this exact promise is what we return to the
+      // caller. Nothing below this line can delay or break it.
+      const responsePromise = originalFetch(input, init);
+
+      try {
+        const url = getRequestUrl(input);
+        const method = getRequestMethod(input, init);
+        const isCartAdd =
+          CART_ADD_ENDPOINT_RE.test(url) &&
+          String(method).toUpperCase() === "POST";
+
+        if (isCartAdd) {
+          responsePromise
+            .then((response) => response.clone())
+            .then((clone) => handleCartAddResponse(clone, originalFetch))
+            .catch((error) => {
+              console.warn("[cart-bundle-rule] Bundle check failed:", error);
+            });
+        }
+      } catch (error) {
+        // Even a bug in the detection setup above must never affect the
+        // real add-to-cart request, which was already sent above.
+        console.warn("[cart-bundle-rule] Could not inspect request:", error);
+      }
+
+      return responsePromise;
+    };
+  }
 
   class ShopTheLook {
     /**
@@ -123,14 +453,7 @@
     /* ----------------------------- Data fetching ----------------------------- */
 
     async getProduct(handle) {
-      if (productCache.has(handle)) return productCache.get(handle);
-
-      const response = await fetch(`/products/${handle}.js`);
-      if (!response.ok) throw new Error(`Product "${handle}" not found`);
-
-      const product = await response.json();
-      productCache.set(handle, product);
-      return product;
+      return fetchProductByHandle(handle);
     }
 
     /* ----------------------------- Rendering ----------------------------- */
@@ -514,7 +837,13 @@
 
           // --- Business rule -------------------------------------------------
           // If this variant matches the configured bundle trigger (default:
-          // Black + Medium), add the configured bundle product too.
+          // Black + Medium), add the configured bundle product too. Note:
+          // the global bundle rule above would also catch this same add
+          // from its own response-inspection, but resolving it here too
+          // means the bundle line lands in the SAME /cart/add.js request
+          // (nicer UX: one network round trip, one "Added!" message).
+          // itemMatchesBundleTrigger() on the global rule still guards
+          // against double-adding if this path already included it.
           let bundleAdded = false;
           if (this.variantMatchesBundleTrigger(variant) && this.bundleHandle) {
             const bundleVariantId = await this.getBundleVariantId();
@@ -553,15 +882,24 @@
     /**
      * Checks whether a variant's option values include both the
      * merchant-configured bundle trigger color and size, regardless of
-     * option order or letter case.
+     * option order, letter case, or whether the size is typed as "M" or
+     * "Medium".
      */
     variantMatchesBundleTrigger(variant) {
       if (!this.bundleColor && !this.bundleSize) return false;
-      const values = variant.options.map((value) =>
-        String(value).trim().toLowerCase(),
-      );
-      const hasColor = !this.bundleColor || values.includes(this.bundleColor);
-      const hasSize = !this.bundleSize || values.includes(this.bundleSize);
+      const values = variant.options.map((value) => String(value));
+
+      const hasColor =
+        !this.bundleColor ||
+        values.some(
+          (value) => normalizeColor(value) === normalizeColor(this.bundleColor),
+        );
+      const hasSize =
+        !this.bundleSize ||
+        values.some(
+          (value) => normalizeSize(value) === normalizeSize(this.bundleSize),
+        );
+
       return hasColor && hasSize;
     }
 
@@ -607,42 +945,7 @@
      * Dawn's default cart drawer.
      */
     async refreshCartDrawer() {
-      try {
-        const response = await fetch(
-          `${window.Shopify?.routes?.root || "/"}?sections=cart-drawer,cart-icon-bubble`,
-        );
-        if (!response.ok) return;
-        const data = await response.json();
-        const parser = new DOMParser();
-
-        if (data["cart-drawer"]) {
-          const doc = parser.parseFromString(data["cart-drawer"], "text/html");
-          const newDrawer = doc.querySelector("cart-drawer");
-          const oldDrawer = document.querySelector("cart-drawer");
-          if (newDrawer && oldDrawer) {
-            oldDrawer.replaceWith(newDrawer);
-          }
-        }
-
-        if (data["cart-icon-bubble"]) {
-          const doc = parser.parseFromString(
-            data["cart-icon-bubble"],
-            "text/html",
-          );
-          const newBubble = doc.querySelector(".shopify-section");
-          const oldBubble = document.getElementById("cart-icon-bubble");
-          if (newBubble && oldBubble) oldBubble.innerHTML = newBubble.innerHTML;
-        }
-
-        const drawer = document.querySelector("cart-drawer");
-        if (drawer && typeof drawer.open === "function") {
-          drawer.open();
-        }
-      } catch (error) {
-        // Non-fatal: the item is already in the cart even if the drawer
-        // failed to refresh visually.
-        console.warn("[shop-the-look] Could not refresh cart drawer:", error);
-      }
+      return refreshCartUI();
     }
 
     /* ----------------------------- Utilities ----------------------------- */
@@ -725,4 +1028,9 @@
 
   // Re-init if the section is added/re-rendered live in the theme editor.
   document.addEventListener("shopify:section:load", initShopTheLook);
+
+  // The bundle rule itself has no dependency on the "Shop the look"
+  // section's DOM — it only patches fetch — so it's activated
+  // immediately, independent of initShopTheLook/DOMContentLoaded.
+  initGlobalCartBundleRule();
 })();
