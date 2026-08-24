@@ -1,0 +1,324 @@
+.hgg,
+.hgg * {
+  box-sizing: border-box;
+}
+
+.hgg {
+  width: 100%;
+  padding-top: var(--hgg-section-padding-top, 0px);
+  padding-bottom: var(--hgg-section-padding-bottom, 0px);
+  overflow: hidden;
+}
+
+/* ===================== FILA 1: BANNER FULL WIDTH ===================== */
+.hgg-banner {
+  width: 100%;
+  height: var(--hgg-banner-height-desktop, 320px);
+  overflow: hidden;
+  background-color: #f4f4f4;
+}
+
+.hgg-banner__link {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.hgg-banner__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+.hgg-banner__img--mobile {
+  display: none;
+}
+
+/* ===================== FILA 2: TEXTO 33% + IMAGEN 66% ===================== */
+.hgg-row2 {
+  display: grid;
+  grid-template-columns: minmax(0, 39%) minmax(0, 61%);
+  align-items: stretch;
+}
+
+.hgg-row2__text {
+  background-color: var(--hgg-text-bg, #fff);
+  color: var(--hgg-text-color, #000);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: start;
+  text-align: left;
+  width: 100%;
+  max-width: 550px;
+  gap: 50px;
+  padding: 48px 40px 48px 60px;
+}
+
+.hgg-row2__heading {
+  font-size: clamp(30px, 40px, 70px);
+  font-weight: 500;
+  color: #000;
+  text-align: start;
+  margin: 0;
+}
+
+.hgg-row2__body {
+  line-height: 1.4;
+  font-size: 20px;
+  color: #000;
+  font-weight: 400;
+  max-width: 483px;
+}
+.hgg-row2__body p {
+  margin: 0;
+}
+
+.hgg-row2__image {
+  position: relative;
+  background-color: #f4f4f4;
+  min-height: 320px;
+}
+
+.hgg-row2__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hgg-row2__placeholder {
+  width: 100%;
+  height: 100%;
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eaeaea;
+}
+
+.hgg-placeholder-svg {
+  width: 40%;
+  height: 40%;
+  opacity: 0.5;
+}
+
+/* ===================== BOTÓN (superpuesto sobre la imagen) ===================== */
+.hgg-btn-mobile {
+  display: none !important;
+}
+.hgg-btn-desktop {
+  display: block;
+}
+
+ .hgg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: end;
+  gap: 10px;
+  padding: 15px 28px;
+  max-width: 220px;
+  width: 100%;
+  background-color: var(--hgg-btn-bg, #000000);
+  color: var(--hgg-btn-text, #fff);
+  text-decoration: none;
+  font-size: 16px;
+  line-height: 20px;
+  text-transform: uppercase;
+  font-weight: 400;
+  border: none;
+  border-radius: 0;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transition: color 0.35s ease-in-out;
+}
+
+.hgg-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #FFF544;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.35s ease-in-out;
+  z-index: -1;
+}
+
+.hgg-btn:hover {
+  color: #000;
+  transform: none;
+} 
+
+.hgg-btn:hover img {
+  filter: brightness(0);
+}
+
+.hgg-btn:hover::before {
+  transform: scaleX(1);
+}
+
+.hgg-btn__arrow {
+  transition:
+    transform 0.2s ease,
+    filter 0.35s ease-in-out;
+  position: relative;
+  z-index: 1;
+  filter: brightness(1);
+}
+
+.hgg-btn:hover .hgg-btn__arrow {
+  transform: translateX(4px);
+  filter: brightness(0) !important;
+}
+
+/* ===================== FILA 3: FRANJA DE TEXTO FINAL ===================== */
+.hgg-bottom {
+  background-color: var(--hgg-bottom-bg, #1a1a1a);
+  color: var(--hgg-bottom-text-color, #fff);
+  text-align: center;
+  padding: 14px 20px;
+}
+
+.hgg-bottom__text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 13.42px;
+  text-transform: uppercase;
+  font-weight: 400;
+  padding: 10px;
+}
+
+/* ===================== RESPONSIVE (MOBILE) ===================== */
+@media screen and (max-width: 749px) {
+  .hgg {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .hgg-banner {
+    height: var(--hgg-banner-height-mobile, 220px);
+    display: none;
+  }
+
+  .hgg-banner__img--desktop {
+    display: none;
+  }
+
+  .hgg-banner__img--mobile {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .hgg-row2 {
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+  }
+
+  .hgg-row2__text {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    text-align: center;
+    align-items: center;
+    padding: 49px 16px 12px;
+    gap: 20px;
+  }
+
+  .hgg-row2__heading {
+    width: 100%;
+    max-width: 100%;
+    font-size: clamp(28px, 8vw, 40px);
+    line-height: 1.1;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  .hgg-row2__body {
+    width: 100%;
+    max-width: 100%;
+    font-size: 16px;
+    line-height: 1.45;
+    text-align: center;
+  }
+
+  .hgg-row2__image {
+    width: 100%;
+    min-width: 0;
+    min-height: 260px;
+    height: min(72vw, 520px);
+    overflow: hidden;
+  }
+
+  .hgg-row2__placeholder {
+    width: 100%;
+    min-width: 0;
+    min-height: 260px;
+    height: 100%;
+  }
+
+  .hgg-row2__image img {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+  }
+
+  .hgg-btn-mobile {
+    display: inline-flex !important;
+    position: absolute;
+    left: 50% !important;
+    right: auto !important;
+    bottom: 16px;
+    transform: translateX(-50%);
+    width: auto;
+    min-width: 160px;
+    max-width: calc(100% - 32px);
+    box-sizing: border-box;
+    justify-content: center;
+    align-items: center;
+    padding: 12px 22px;
+    font-size: 15px;
+    line-height: 20px;
+    white-space: nowrap;
+  }
+
+  .hgg-btn-mobile:hover {
+    transform: translateX(-50%);
+  }
+
+  .hgg-btn-desktop {
+    display: none;
+  }
+
+  .hgg-bottom {
+    padding: 10px 14px;
+  }
+
+  .hgg-bottom__text {
+    padding: 8px 4px;
+    font-size: 12px;
+    line-height: 1.3;
+  }
+}
+
+@media screen and (min-width: 750px) and (max-width: 1100px) {
+  .hgg-row2__text {
+    padding-left: 32px;
+    padding-right: 24px;
+    gap: 32px;
+  }
+
+  .hgg-row2__heading {
+    font-size: clamp(30px, 4vw, 40px);
+  }
+
+  .hgg-row2__body {
+    font-size: 17px;
+  }
+}

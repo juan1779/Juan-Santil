@@ -1,0 +1,441 @@
+/* =========================================================
+   Shop the Look — section styles
+   Scoped under .shop-the-look so it never leaks into Dawn's
+   global styles. Uses CSS custom properties set inline by the
+   Liquid section so the grid can be reconfigured from the
+   theme editor without touching CSS.
+   ========================================================= */
+
+.shop-the-look {
+  padding-top: var(--stl-padding-top, 36px);
+  padding-bottom: var(--stl-padding-bottom, 36px);
+}
+
+.shop-the-look__heading {
+  margin: 0 0 30px;
+  font-family: "Lustria", serif;
+  text-align: center;
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+/* ---------- Grid ---------- */
+
+.shop-the-look__grid {
+  display: grid;
+  grid-template-columns: repeat(var(--stl-mobile-columns, 2), minmax(0, 1fr));
+  gap: 4px;
+}
+
+@media screen and (min-width: 750px) {
+  .shop-the-look__heading {
+    margin: 0 0 30px;
+    font-family: "Lustria", serif;
+    font-size: 36px;
+    text-align: start;
+    line-height: 1.2;
+  }
+  .shop-the-look__grid {
+    grid-template-columns: repeat(
+      var(--stl-desktop-columns, 3),
+      minmax(0, 1fr)
+    );
+    gap: 20px;
+  }
+}
+
+.shop-the-look__item {
+  position: relative;
+}
+
+.shop-the-look__image-wrapper {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.shop-the-look__image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+}
+
+.shop-the-look__image--placeholder svg {
+  width: 100%;
+  height: 100%;
+}
+
+.shop-the-look__placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 3 / 4;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px dashed rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+  font-size: 1.3rem;
+}
+
+/* ---------- Hotspot ("+") button ---------- */
+
+.shop-the-look__hotspot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.95);
+  color: #111;
+  font-size: 8.5px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  transition:
+    transform 0.15s ease,
+    background-color 0.15s ease;
+  padding: 0;
+}
+
+.shop-the-look__hotspot::before {
+  /* subtle pulse ring to draw attention without being obnoxious */
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  animation: stl-pulse 2.2s ease-out infinite;
+}
+
+@keyframes stl-pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.9;
+  }
+  70% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ---------- Modal ---------- */
+
+.shop-the-look__modal {
+  border: none;
+  padding: 0;
+  border-radius: 12px;
+  max-width: 311px;
+  width: 100%;
+  max-height: 88vh;
+  overflow: hidden;
+  background: #fff;
+  color: #111;
+}
+
+.shop-the-look__modal::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.shop-the-look__modal-inner {
+  position: relative;
+  overflow-y: auto;
+  padding: 35px 20px 25px 20px;
+  
+}
+
+.shop-the-look__modal-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  font-size: 2rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #000;
+  font-weight: 600;
+  z-index: 1;
+}
+
+.shop-the-look__modal-close:hover {
+  color: #111;
+}
+
+/* ----- Modal content, injected by JS ----- */
+
+.stl-quickview {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stl-quickview__top {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.stl-quickview__image {
+  align-self: flex-start;
+  width: 120px;
+  height: 140px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.stl-quickview__title {
+  font-size: 16px;
+  font-weight: 300;
+  line-height: 1.2;
+  margin: 0;
+  color: #000;
+}
+
+.stl-quickview__price {
+  margin: 22px 0 13px;
+  font-family: "Lustria", serif;
+  font-size: 16px;
+  font-weight: 400;
+  color: #000;
+}
+
+.stl-quickview__price--compare {
+  text-decoration: line-through;
+  opacity: 0.6;
+  font-weight: 400;
+  margin-right: 0.5rem;
+}
+
+.stl-quickview__description {
+  font-size: 12px;
+  line-height: 1.1;
+  font-weight: 300;
+  color: #000;
+  letter-spacing: -1%;
+}
+
+.stl-quickview__description :is(p, ul, ol) {
+  margin: 0;
+}
+
+.stl-quickview__option {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 11.5px;
+}
+
+.stl-quickview__option-label {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.3;
+  color: #333;
+}
+
+/* ---------- Color swatches ---------- */
+/* Segmented control: each swatch fills equal width, separated by a
+   1px divider, with a color stripe on the left that always reflects
+   the actual variant color (set inline via --stl-swatch-color). */
+
+.stl-quickview__swatches {
+  display: flex;
+  border: 0.5px solid rgba(0, 0, 0, 1);
+  overflow: hidden;
+}
+
+.stl-swatch {
+  position: relative;
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 12px 14px 22px;
+  border: none;
+  border-right: 1px solid rgba(0, 0, 0, 0.2);
+  background: #fff;
+  color: #111;
+  cursor: pointer;
+  font-size: 15px;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.stl-swatch:last-child {
+  border-right: none;
+}
+
+/* The color stripe itself — always shows the real variant color,
+   selected or not, per the "franja" requirement. */
+.stl-swatch::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  background-color: var(--stl-swatch-color, transparent);
+}
+
+.stl-swatch__label {
+  text-transform: capitalize;
+  font-weight: 400;
+  font-size: 18px;
+  letter-spacing: -2%;
+}
+
+.stl-swatch:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+/* Selected: background turns black, text turns white, stripe unchanged. */
+.stl-swatch[aria-pressed="true"] {
+  background: #000;
+  color: #fff;
+}
+
+.stl-swatch[aria-pressed="true"]:hover {
+  background: #000;
+}
+
+.stl-swatch:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+/* ---------- Size / other select options ---------- */
+
+.stl-quickview__select-wrapper {
+  position: relative;
+}
+
+.stl-quickview__select {
+  width: 100%;
+  padding: 14px 40px 14px 16px;
+  border: 0.5px solid rgba(0, 0, 0, 1);
+  font-size: 16px;
+  background: #fff;
+  color: #000;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.stl-quickview__select:invalid,
+.stl-quickview__select option[value=""] {
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.stl-quickview__select:focus-visible {
+    outline: none;
+    outline-offset: none;
+    box-shadow: none;
+}
+
+/* Custom chevron, since native <select> arrows vary a lot between
+   browsers and we removed the default appearance above. */
+.stl-quickview__select-wrapper::after {
+  content: "";
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border-right: 2.2px solid #111;
+  border-bottom: 2.2px solid #111;
+  transform: translateY(-65%) rotate(45deg);
+  pointer-events: none;
+}
+
+/* ---------- Add to cart button ---------- */
+
+.stl-quickview__add-to-cart {
+  margin-top: 41px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 15px;
+  border: none;
+  background: #000;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  line-height: 20.48px;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.stl-quickview__add-to-cart-arrow {
+  display: inline-block;
+  width: 33px;
+  height: 12px;
+  object-fit: cover;
+}
+
+.stl-quickview__add-to-cart:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.stl-quickview__message {
+  font-size: 1.25rem;
+  min-height: 1.5em;
+}
+
+.stl-quickview__message[data-state="error"] {
+  color: #c0392b;
+}
+
+.stl-quickview__message[data-state="success"] {
+  color: #1e7e34;
+}
+
+.stl-quickview__loading,
+.stl-quickview__error {
+  padding: 2rem 0;
+  text-align: center;
+  font-size: 1.4rem;
+}
+
+.stl-spinner {
+  width: 24px;
+  height: 24px;
+  margin: 0 auto 0.75rem;
+  border: 3px solid rgba(0, 0, 0, 0.15);
+  border-top-color: #111;
+  border-radius: 50%;
+  animation: stl-spin 0.7s linear infinite;
+}
+
+@keyframes stl-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media screen and (max-width: 750px) {
+  .shop-the-look {
+    padding: 40px 16px 24px;
+  }
+}

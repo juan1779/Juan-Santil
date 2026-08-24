@@ -1,0 +1,277 @@
+{{ 'shop-the-look.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'shop-the-look.js' | asset_url }}" defer="defer"></script>
+
+{%- comment -%}
+  Section: Shop the Look
+  ------------------------------------------------------------
+  Renders a responsive 6-image grid ("look" photos). Each image
+  has a "+" hotspot (position configurable per block from the
+  customizer) that opens a shared quick-view popup. The popup is
+  populated dynamically (name, price, description, variants) via
+  the Storefront AJAX API (/products/{handle}.js) and the product
+  is added to the cart via /cart/add.js — all vanilla JS, no
+  jQuery, no page reload.
+
+  Special rule (merchant requirement):
+  If the variant added has options matching the configured
+  "bundle trigger" color + size (default Black / Medium), the
+  configured bundle product (default "soft-winter-jacket") is
+  added to the cart automatically in the same request.
+{%- endcomment -%}
+
+<div
+  class="shop-the-look color-{{ section.settings.color_scheme }}"
+  id="ShopTheLook-{{ section.id }}"
+  style="
+    --stl-desktop-columns: {{ section.settings.desktop_columns }};
+    --stl-mobile-columns: {{ section.settings.mobile_columns }};
+    --stl-padding-top: {{ section.settings.padding_top }}px;
+    --stl-padding-bottom: {{ section.settings.padding_bottom }}px;
+  "
+  data-shop-the-look
+  data-money-format="{{ shop.money_format | escape }}"
+  data-bundle-handle="{{ section.settings.bundle_product_handle | escape }}"
+  data-bundle-color="{{ section.settings.bundle_trigger_color | escape }}"
+  data-bundle-size="{{ section.settings.bundle_trigger_size | escape }}"
+  data-cart-add-url="{{ routes.cart_add_url }}"
+  data-cart-url="{{ routes.cart_url }}"
+>
+  <div class="shop-the-look__container page-width">
+
+    {%- if section.settings.heading != blank -%}
+      <h2 class="shop-the-look__heading {{ section.settings.heading_size }}">
+        {{ section.settings.heading }}
+      </h2>
+    {%- endif -%}
+
+    <div class="shop-the-look__grid" role="list">
+      {%- for block in section.blocks -%}
+        {%- assign product = block.settings.product -%}
+        <div class="shop-the-look__item" role="listitem" {{ block.shopify_attributes }}>
+          {%- if product != blank -%}
+            <div class="shop-the-look__image-wrapper">
+              {%- liquid
+                if block.settings.custom_image
+                  assign display_image = block.settings.custom_image
+                elsif product.featured_media
+                  assign display_image = product.featured_media
+                endif
+              -%}
+
+              {%- if display_image -%}
+                <img
+                  class="shop-the-look__image"
+                  src="{{ display_image | image_url: width: 800 }}"
+                  srcset="
+                    {{ display_image | image_url: width: 400 }} 400w,
+                    {{ display_image | image_url: width: 800 }} 800w,
+                    {{ display_image | image_url: width: 1200 }} 1200w
+                  "
+                  sizes="(min-width: 990px) calc(100vw / {{ section.settings.desktop_columns }}), calc(100vw / {{ section.settings.mobile_columns }})"
+                  alt="{{ display_image.alt | default: product.title | escape }}"
+                  width="{{ display_image.width }}"
+                  height="{{ display_image.height }}"
+                  loading="lazy"
+                >
+              {%- else -%}
+                <div class="shop-the-look__image shop-the-look__image--placeholder">
+                  {{ 'product-1' | placeholder_svg_tag: 'placeholder-svg' }}
+                </div>
+              {%- endif -%}
+
+              <button
+                type="button"
+                class="shop-the-look__hotspot"
+                style="left: {{ block.settings.hotspot_x }}%; top: {{ block.settings.hotspot_y }}%;"
+                data-hotspot
+                data-product-handle="{{ product.handle }}"
+                aria-haspopup="dialog"
+                aria-label="{{ 'products.product.quick_view' | t: default: 'Quick view' }} — {{ product.title | escape }}"
+              >
+                <img src="https://cdn.shopify.com/s/files/1/0997/7931/3953/files/plus.png?v=1787422926" alt="plus-image" width="9" height="9">
+              </button>
+            </div>
+          {%- else -%}
+            <div class="shop-the-look__placeholder">
+              <p>{{ 'shop_the_look.select_product' | t: default: 'Select a product for this block in the theme editor' }}</p>
+            </div>
+          {%- endif -%}
+        </div>
+      {%- endfor -%}
+    </div>
+  </div>
+
+  {%- comment -%} Shared quick-view popup. Content is injected by JS. {%- endcomment -%}
+  <dialog class="shop-the-look__modal" data-modal>
+    <div class="shop-the-look__modal-inner">
+      <button type="button" class="shop-the-look__modal-close" data-modal-close aria-label="{{ 'accessibility.close' | t: default: 'Close' }}">
+        X
+      </button>
+      <div class="shop-the-look__modal-content" data-modal-content>
+        {%- comment -%} Loading / product markup injected here by JS {%- endcomment -%}
+      </div>
+    </div>
+  </dialog>
+</div>
+
+{% schema %}
+{
+  "name": "Shop the look",
+  "tag": "section",
+  "class": "section shop-the-look-section",
+  "max_blocks": 6,
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Shop the look"
+    },
+    {
+      "type": "select",
+      "id": "heading_size",
+      "label": "Heading size",
+      "options": [
+        { "value": "h3", "label": "Small" },
+        { "value": "h2", "label": "Medium" },
+        { "value": "h1", "label": "Large" }
+      ],
+      "default": "h2"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Color scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "header",
+      "content": "Layout"
+    },
+    {
+      "type": "select",
+      "id": "desktop_columns",
+      "label": "Desktop columns",
+      "options": [
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" }
+      ],
+      "default": "3"
+    },
+    {
+      "type": "select",
+      "id": "mobile_columns",
+      "label": "Mobile columns",
+      "info": "On mobile the grid never turns into a slider.",
+      "options": [
+        { "value": "1", "label": "1" },
+        { "value": "2", "label": "2" }
+      ],
+      "default": "2"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "Top padding",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "default": 36
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "Bottom padding",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "default": 36
+    },
+    {
+      "type": "header",
+      "content": "Automatic bundle rule"
+    },
+    {
+      "type": "paragraph",
+      "content": "If the variant a customer adds to the cart matches both values below, the bundle product is added to the cart automatically alongside it."
+    },
+    {
+      "type": "text",
+      "id": "bundle_product_handle",
+      "label": "Bundle product handle",
+      "default": "soft-winter-jacket",
+      "info": "Product handle, e.g. the part after /products/ in its URL."
+    },
+    {
+      "type": "text",
+      "id": "bundle_trigger_color",
+      "label": "Trigger color value",
+      "default": "Black"
+    },
+    {
+      "type": "text",
+      "id": "bundle_trigger_size",
+      "label": "Trigger size value",
+      "default": "Medium"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "product",
+      "name": "Product",
+      "settings": [
+        {
+          "type": "product",
+          "id": "product",
+          "label": "Product"
+        },
+        {
+          "type": "image_picker",
+          "id": "custom_image",
+          "label": "Custom image",
+          "info": "Optional. Leave blank to use the product's featured image."
+        },
+        {
+          "type": "header",
+          "content": "Hotspot position"
+        },
+        {
+          "type": "range",
+          "id": "hotspot_x",
+          "label": "Horizontal position",
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "unit": "%",
+          "default": 50
+        },
+        {
+          "type": "range",
+          "id": "hotspot_y",
+          "label": "Vertical position",
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "unit": "%",
+          "default": 85
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Shop the look",
+      "blocks": [
+        { "type": "product" },
+        { "type": "product" },
+        { "type": "product" },
+        { "type": "product" },
+        { "type": "product" },
+        { "type": "product" }
+      ]
+    }
+  ]
+}
+{% endschema %}

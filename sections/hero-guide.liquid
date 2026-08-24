@@ -1,0 +1,351 @@
+{{ 'hero-guide.css' | asset_url | stylesheet_tag }}
+
+<style>
+  .hgg--{{ section.id }} .hgg-row2__body--desktop,
+  .hgg--{{ section.id }} .hgg-bottom__text--desktop {
+    display: block;
+  }
+
+  .hgg--{{ section.id }} .hgg-row2__body--mobile,
+  .hgg--{{ section.id }} .hgg-bottom__text--mobile {
+    display: none;
+  }
+
+  @media screen and (max-width: 767px) {
+    .hgg--{{ section.id }} .hgg-row2__body--desktop,
+    .hgg--{{ section.id }} .hgg-bottom__text--desktop {
+      display: none;
+    }
+
+    .hgg--{{ section.id }} .hgg-row2__body--mobile,
+    .hgg--{{ section.id }} .hgg-bottom__text--mobile {
+      display: block;
+    }
+  }
+</style>
+
+{%- liquid
+  assign s = section.settings
+  assign sid = section.id
+-%}
+
+<section class="hgg hgg--{{ sid }}" style="
+    --hgg-banner-height-desktop: {{ s.banner_height_desktop }}px;
+    --hgg-banner-height-mobile: {{ s.banner_height_mobile }}px;
+    --hgg-text-bg: {{ s.text_bg_color }};
+    --hgg-text-color: {{ s.text_color }};
+    --hgg-btn-bg: {{ s.button_bg_color }};
+    --hgg-btn-text: {{ s.button_text_color }};
+    --hgg-bottom-bg: {{ s.bottom_bg_color }};
+    --hgg-bottom-text-color: {{ s.bottom_text_color }};
+    --hgg-section-padding-top: {{ s.padding_top }}px;
+    --hgg-section-padding-bottom: {{ s.padding_bottom }}px;
+  ">
+
+  {%- comment -%} ============ FILA 1: BANNER FULL WIDTH ============ {%- endcomment -%}
+  {%- if s.banner_image != blank -%}
+    {%- capture banner_img -%}
+      <img
+        class="hgg-banner__img hgg-banner__img--desktop"
+        srcset="
+          {{ s.banner_image | image_url: width: 600 }} 600w,
+          {{ s.banner_image | image_url: width: 900 }} 900w,
+          {{ s.banner_image | image_url: width: 1200 }} 1200w,
+          {{ s.banner_image | image_url: width: 1600 }} 1600w,
+          {{ s.banner_image | image_url: width: 2000 }} 2000w
+        "
+        sizes="100vw"
+        src="{{ s.banner_image | image_url: width: 1600 }}"
+        alt="{{ s.banner_image.alt | escape | default: 'Banner' }}"
+        width="{{ s.banner_image.width }}"
+        height="{{ s.banner_image.height }}"
+        loading="{% if s.banner_lazy_load %}lazy{% else %}eager{% endif %}"
+        {% unless s.banner_lazy_load %}fetchpriority="high"{% endunless %}
+        decoding="async"
+      >
+      {%- if s.banner_image_mobile != blank -%}
+        <img
+          class="hgg-banner__img hgg-banner__img--mobile"
+          src="{{ s.banner_image_mobile | image_url: width: 800 }}"
+          srcset="
+            {{ s.banner_image_mobile | image_url: width: 500 }} 500w,
+            {{ s.banner_image_mobile | image_url: width: 800 }} 800w,
+            {{ s.banner_image_mobile | image_url: width: 1000 }} 1000w
+          "
+          sizes="100vw"
+          alt="{{ s.banner_image_mobile.alt | escape | default: 'Banner' }}"
+          width="{{ s.banner_image_mobile.width }}"
+          height="{{ s.banner_image_mobile.height }}"
+          loading="{% if s.banner_lazy_load %}lazy{% else %}eager{% endif %}"
+          decoding="async"
+        >
+      {%- endif -%}
+    {%- endcapture -%}
+    <div class="hgg-banner">
+      {%- if s.banner_link != blank -%}
+        <a
+          href="{{ s.banner_link }}"
+          class="hgg-banner__link"
+          aria-label="{{ s.banner_image.alt | escape | default: 'Banner' }}">
+          {{ banner_img }}
+        </a>
+      {%- else -%}
+        {{ banner_img }}
+      {%- endif -%}
+    </div>
+  {%- endif -%}
+
+  {%- comment -%} ============ FILA 2: TEXTO 33% + IMAGEN 66% CON BOTÓN ============ {%- endcomment -%}
+  <div class="hgg-row2">
+    <div class="hgg-row2__text">
+      {%- if s.heading != blank -%}
+        <h2 class="hgg-row2__heading">{{ s.heading }}</h2>
+      {%- endif -%}
+      {%- if s.text != blank -%}
+        <div class="hgg-row2__body hgg-row2__body--desktop rte">{{ s.text }}</div>
+      {%- endif -%}
+      {%- if s.text_mobile != blank -%}
+        <div class="hgg-row2__body hgg-row2__body--mobile rte">{{ s.text_mobile }}</div>
+      {%- endif -%}
+      {%- if s.button_label != blank -%}
+        <a
+          {% if s.button_link != blank %}
+          href="{{ s.button_link }}"
+          {% else %}
+          role="link"
+          aria-disabled="true"
+          {% endif %}
+          class="hgg-btn hgg-btn--overlay hgg-btn--{{ s.button_position }} hgg-btn-desktop">
+          {{ s.button_label }}
+          <img
+            class="stl-quickview__add-to-cart-arrow"
+            src="https://cdn.shopify.com/s/files/1/0997/7931/3953/files/arrow.webp?v=1787444485"
+            alt=""
+            width="25"
+            height="6">
+        </a>
+      {%- endif -%}
+    </div>
+
+    <div class="hgg-row2__image">
+      {%- if s.side_image != blank -%}
+        <img
+          src="{{ s.side_image | image_url: width: 1200 }}"
+          srcset="
+            {{ s.side_image | image_url: width: 500 }} 500w,
+            {{ s.side_image | image_url: width: 800 }} 800w,
+            {{ s.side_image | image_url: width: 1200 }} 1200w,
+            {{ s.side_image | image_url: width: 1600 }} 1600w
+          "
+          sizes="(min-width: 768px) 66vw, 100vw"
+          alt="{{ s.side_image.alt | escape | default: s.heading | escape }}"
+          width="{{ s.side_image.width }}"
+          height="{{ s.side_image.height }}"
+          loading="lazy"
+          decoding="async">
+      {%- else -%}
+        <div class="hgg-row2__placeholder">{{ 'image' | placeholder_svg_tag: 'hgg-placeholder-svg' }}</div>
+      {%- endif -%}
+
+      {%- if s.button_label != blank -%}
+        <a
+          {% if s.button_link != blank %}
+          href="{{ s.button_link }}"
+          {% else %}
+          role="link"
+          aria-disabled="true"
+          {% endif %}
+          class="hgg-btn hgg-btn--overlay hgg-btn--{{ s.button_position }} hgg-btn-mobile">
+          {{ s.button_label }}
+          <img
+            class="stl-quickview__add-to-cart-arrow"
+            src="https://cdn.shopify.com/s/files/1/0997/7931/3953/files/arrow.webp?v=1787444485"
+            alt=""
+            width="25"
+            height="6">
+        </a>
+      {%- endif -%}
+
+    </div>
+  </div>
+
+  {%- comment -%} ============ FILA 3: FRANJA DE TEXTO FINAL ============ {%- endcomment -%}
+  {%- if s.bottom_text != blank or s.bottom_text_mobile != blank -%}
+    <div class="hgg-bottom">
+      {%- if s.bottom_text != blank -%}
+        <p class="hgg-bottom__text hgg-bottom__text--desktop">{{ s.bottom_text }}</p>
+      {%- endif -%}
+      {%- if s.bottom_text_mobile != blank -%}
+        <p class="hgg-bottom__text hgg-bottom__text--mobile">{{ s.bottom_text_mobile }}</p>
+      {%- endif -%}
+    </div>
+  {%- endif -%}
+
+</section>
+
+{% schema %}
+  {
+    "name": "Hero Gift Guide",
+    "tag": "section",
+    "class": "section-hero-gift-guide",
+    "settings": [
+      {
+        "type": "header",
+        "content": "Fila 1 · Banner (100% ancho)"
+      },
+      {
+        "type": "image_picker",
+        "id": "banner_image",
+        "label": "Imagen del banner (desktop)"
+      },
+      {
+        "type": "image_picker",
+        "id": "banner_image_mobile",
+        "label": "Imagen del banner (móvil, opcional)"
+      },
+      {
+        "type": "url",
+        "id": "banner_link",
+        "label": "Enlace del banner (opcional)"
+      }, {
+        "type": "checkbox",
+        "id": "banner_lazy_load",
+        "label": "Carga diferida (lazy load)",
+        "default": false,
+        "info": "Desactívalo si esta sección aparece al inicio de la página (mejora LCP)."
+      }, {
+        "type": "range",
+        "id": "banner_height_desktop",
+        "label": "Alto en escritorio (px)",
+        "min": 150,
+        "max": 700,
+        "step": 10,
+        "default": 320
+      }, {
+        "type": "range",
+        "id": "banner_height_mobile",
+        "label": "Alto en móvil (px)",
+        "min": 120,
+        "max": 500,
+        "step": 10,
+        "default": 220
+      }, {
+        "type": "header",
+        "content": "Fila 2 · Texto (33%) + Imagen (66%)"
+      }, {
+        "type": "text",
+        "id": "heading",
+        "label": "Título",
+        "default": "The Gift Guide"
+      }, {
+        "type": "richtext",
+        "id": "text",
+        "label": "Descripción (desktop)",
+        "default": "<p>Discover Joy: Your Ultimate Holiday Gift Destination. Explore our curated selection and find the perfect gift to delight your loved ones this holiday season.</p>"
+      }, {
+        "type": "richtext",
+        "id": "text_mobile",
+        "label": "Descripción (móvil)",
+        "default": "<p>Discover Joy: Your Ultimate Holiday Gift Destination.</p>"
+      }, {
+        "type": "color",
+        "id": "text_bg_color",
+        "label": "Fondo columna de texto",
+        "default": "#ffffff"
+      }, {
+        "type": "color",
+        "id": "text_color",
+        "label": "Color del texto",
+        "default": "#1a1a1a"
+      }, {
+        "type": "image_picker",
+        "id": "side_image",
+        "label": "Imagen (columna 66%)"
+      }, {
+        "type": "text",
+        "id": "button_label",
+        "label": "Texto del botón",
+        "default": "Shop now"
+      }, {
+        "type": "url",
+        "id": "button_link",
+        "label": "Enlace del botón"
+      }, {
+        "type": "select",
+        "id": "button_position",
+        "label": "Posición del botón sobre la imagen",
+        "options": [
+          {
+            "value": "left",
+            "label": "Izquierda"
+          }, {
+            "value": "center",
+            "label": "Centro"
+          }, {
+            "value": "right",
+            "label": "Derecha"
+          }
+        ],
+        "default": "left"
+      }, {
+        "type": "color",
+        "id": "button_bg_color",
+        "label": "Fondo del botón",
+        "default": "#000000"
+      }, {
+        "type": "color",
+        "id": "button_text_color",
+        "label": "Texto del botón",
+        "default": "#ffffff"
+      }, {
+        "type": "header",
+        "content": "Fila 3 · Franja de texto final"
+      }, {
+        "type": "text",
+        "id": "bottom_text",
+        "label": "Texto final (desktop)",
+        "default": "SUSTAINABLE, ETHICALLY MADE ACTIVEWEAR"
+      }, {
+        "type": "text",
+        "id": "bottom_text_mobile",
+        "label": "Texto final (móvil)",
+        "default": "SUSTAINABLE, ETHICALLY MADE ACTIVEWEAR"
+      }, {
+        "type": "color",
+        "id": "bottom_bg_color",
+        "label": "Color de fondo",
+        "default": "#1a1a1a"
+      }, {
+        "type": "color",
+        "id": "bottom_text_color",
+        "label": "Color del texto",
+        "default": "#ffffff"
+      }, {
+        "type": "header",
+        "content": "Espaciado de la sección"
+      }, {
+        "type": "range",
+        "id": "padding_top",
+        "label": "Espacio superior",
+        "min": 0,
+        "max": 100,
+        "step": 4,
+        "default": 0
+      }, {
+        "type": "range",
+        "id": "padding_bottom",
+        "label": "Espacio inferior",
+        "min": 0,
+        "max": 100,
+        "step": 4,
+        "default": 0
+      }
+    ],
+    "presets": [
+      {
+        "name": "Hero Gift Guide",
+        "category": "Imagen con texto"
+      }
+    ]
+  }
+{% endschema %}
